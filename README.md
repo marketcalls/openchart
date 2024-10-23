@@ -58,6 +58,31 @@ Before fetching historical data or searching for symbols, download the master da
 nse.download()
 ```
 
+### Download Market Watch Indicies
+
+Fetches the Market watch indicies of NSE
+
+```python
+import pandas as pd 
+df = nse_data.fetch_available_mw_indices() # Returns a dataframe
+
+print(df.tail())
+
+```
+
+### Download the Equity Market Watch for a given index
+
+Once the available market watch indices are downloaded, you can separately get the market watch for the index along with its associated equities.
+
+``` python
+
+df1 = nse_data.fetch_equity_market_index_data('NIFTY 50')
+df2 = nse_data.fetch_equity_market_index_data('NIFTY 500')
+
+print(df1.head())
+
+```
+
 
 ### Fetch Historical Data
 

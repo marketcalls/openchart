@@ -139,3 +139,127 @@ class NSEData:
     def timeframes(self):
         """Return supported timeframes."""
         return ['1m', '3m', '5m', '10m', '15m', '30m', '1h', '1d', '1w', '1M']
+        
+    def fetch_equity_market_index_data(self, indexgroup: str):
+        """Fetch equity market associated index data for a given index group."""
+        try:
+            # First, visit the NSE homepage to get necessary cookies
+            self.session.get("https://www.nseindia.com", timeout=10)
+
+            # Update headers for the API request
+            self.session.headers.update({
+                "Accept": "*/*",
+                "Accept-Language": "en-US,en;q=0.9",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Referer": "https://www.nseindia.com/market-data/live-equity-market",
+                "X-Requested-With": "XMLHttpRequest",
+            })
+
+            # Make the API request
+            request_url = f"https://www.nseindia.com/api/equity-stockIndices?csv=true&index={indexgroup}&selectValFormat=crores"
+            response = self.session.get(request_url, timeout=10)
+            response.raise_for_status()
+
+            data = response.text.splitlines()
+            
+            # Remove the first 16 lines as they are not needed
+            if len(data) > 16:
+                datadate = data[15].replace('"','').strip()
+                data = data[16:]
+                # print(f"Data length: {len(data)}")
+                # print(data[0])
+            else:
+                print("No data received from the API.")
+                return pd.DataFrame()
+            # "NIFTY 50","24,378.15","24,604.25","24,378.10","24,472.10","24,435.50","-","-36.60","-0.15","28,45,56,771","31,927.96","26,277.35","18,926.65","-5.11","26.92"
+            # remove the comma within the quoted values 
+            # ex: "24,378.15" -> "24378.15" 
+            # Convert comma-separated numbers within quotes to numbers without commas
+            data = self.clean_data(data)
+
+            df1= pd.DataFrame([line.split(',') for line in data], columns=['Symbol', 'Open', 'High', 'Low', 'PrevClose', 'LTP', 'IndicativeClose', 'Chng', '%Chng', 'Volume', 'ValueCrores', '52WH', '52WL', '30D%Chng', '365D%Chng'])
+            df1['datadate'] = datadate
+            return df1
+
+        except requests.exceptions.RequestException as e:
+            print(f"An error occurred while fetching broader market data: {e}")
+            return pd.DataFrame()
+
+    def fetch_available_mw_indices(self):
+        """Fetch available marketwatch indices."""
+        try:
+            # First, visit the NSE homepage to get necessary cookies
+            self.session.get("https://www.nseindia.com", timeout=10)
+
+            # Update headers for the API request
+            self.session.headers.update({
+                "Accept": "*/*",
+                "Accept-Language": "en-US,en;q=0.9",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Referer": "https://www.nseindia.com/market-data/live-equity-market",
+                "X-Requested-With": "XMLHttpRequest",
+            })
+
+            # Make the API request
+            request_url = f"https://www.nseindia.com/api/allIndices?csv=true"
+            response = self.session.get(request_url, timeout=10)
+            response.raise_for_status()
+
+            data = response.text.splitlines()
+            
+            # Remove the first 16 lines as they are not needed
+            if len(data) > 17:
+                datadate = data[12].replace('"','').strip()
+                datadate = datadate.split(',')[0]
+                data = data[17:]
+                # print(f"Data length: {len(data)}")
+                # print(data[0])
+            else:
+                print("No data received from the API.")
+                return pd.DataFrame()
+            # "NIFTY 50","24,435.50","-0.15","24,378.15","24,604.25","24,378.10","-","24,472.10","24,781.10","24,971.30","25,790.95","19,281.75","26,277.35","18,926.65","26.92","-5.11"
+            # remove the comma within the quoted values 
+            # ex: "24,378.15" -> "24378.15" 
+            # Convert comma-separated numbers within quotes to numbers without commas
+            data = self.clean_data(data)
+
+            df1= pd.DataFrame([line.split(',') for line in data], columns=['Index', 'Current','%Change','Open', 'High', 'Low', 'IndicativeClose','PrevClose', 'PrevDay',  '1WAgo', '1MonthAgo', '1YrAgo', '52WH', '52WL', '365D%Chng','30D%Chng'])
+            df1['datadate'] = datadate
+            return df1
+
+        except requests.exceptions.RequestException as e:
+            print(f"An error occurred while fetching broader market data: {e}")
+            return pd.DataFrame()
+        
+
+    def clean_data(self, data: list[str]) -> list[str]:
+        cleaned_data = []
+        for line in data:
+            parts = line.split(',')
+            cleaned_parts = []
+            in_quotes = False
+            current_part = ""
+            for part in parts:
+                if part.startswith('"') and part.endswith('"') and part.count('"') == 2:
+                        # Single part fully enclosed in quotes
+                    cleaned_parts.append(part.strip('"').replace(',', ''))
+                elif part.startswith('"'):
+                        # Start of a quoted section
+                    in_quotes = True
+                    current_part = part.strip('"')
+                elif part.endswith('"'):
+                        # End of a quoted section
+                    in_quotes = False
+                    current_part += "," + part.strip('"')
+                    cleaned_parts.append(current_part.replace(',', ''))
+                    current_part = ""
+                elif in_quotes:
+                        # Middle of a quoted section
+                    current_part += "," + part
+                else:
+                        # Not in quotes
+                    cleaned_parts.append(part)
+            cleaned_data.append(','.join(cleaned_parts))
+            
+        data = cleaned_data
+        return data
