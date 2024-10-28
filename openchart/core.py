@@ -47,12 +47,12 @@ class NSEData:
             return pd.DataFrame()
 
     def symbolsearch(self, symbol, exchange):
-        """Search for a symbol in the specified exchange and return the first match."""
+        """Search for a symbol in the specified exchange and return exact match."""
         df = self.nse_data if exchange.upper() == 'NSE' else self.nfo_data
         if df is None:
             print(f"Data for {exchange} not downloaded. Please run download() first.")
             return None
-        result = df[df['Symbol'].str.contains(symbol, case=False, na=False)]
+        result = df[df['Symbol'].str.upper() == symbol.upper()]
         if result.empty:
             print(f"No matching result found for symbol '{symbol}' in {exchange}.")
             return None
