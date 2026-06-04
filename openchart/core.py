@@ -131,7 +131,7 @@ class NSEData:
 
         time_interval, chart_type = interval_map.get(interval, (1, 'D'))
 
-        payload = {
+        params = {
             "token": str(symbol_info['scripcode']),
             "fromDate": int(start.timestamp()) if start else 0,
             "toDate": int(end.timestamp()) if end else int(time.time()),
@@ -142,7 +142,7 @@ class NSEData:
         }
 
         try:
-            response = self.session.post(self.historical_url, json=payload, timeout=10)
+            response = self.session.post(self.historical_url, params=params, timeout=10)
             response.raise_for_status()
             result = response.json()
 
