@@ -26,7 +26,8 @@ def process_historical_data(data, interval):
     df['Timestamp'] = pd.to_datetime(df['Timestamp'], unit='ms', utc=True)
     df['Timestamp'] = df['Timestamp'].dt.tz_localize(None)
     df = df[['Timestamp', 'Open', 'High', 'Low', 'Close', 'Volume']]
-
+    df = df.sort_values('Timestamp', kind='mergesort').drop_duplicates('Timestamp', keep='last')
+    
     # Apply cutoff time only for intraday intervals
     intraday_intervals = ['1m', '5m', '10m', '15m', '30m', '1h']
     if interval in intraday_intervals:
