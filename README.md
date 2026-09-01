@@ -29,10 +29,10 @@ OpenChart is a Python library for downloading intraday and EOD (End of Day) hist
 pip install openchart
 ```
 
-Or install from GitHub:
+Or install from this fork (includes live NSE API fixes - `GET` + `charting.nseindia.com`):
 
 ```bash
-pip install git+https://github.com/marketcalls/openchart.git
+pip install git+https://github.com/unn-Known1/openchart.git
 ```
 
 ## Quick Start
@@ -63,6 +63,7 @@ print(data)
 | Timeframe | Description |
 |-----------|-------------|
 | `1m` | 1 minute |
+| `3m` | 3 minutes |
 | `5m` | 5 minutes |
 | `10m` | 10 minutes |
 | `15m` | 15 minutes |
@@ -253,6 +254,24 @@ Timestamp
 2026-01-14 15:29:59  25675.80  25677.40  25662.60  25669.10       0
 ```
 
+#### Long-term Daily Data (10 years - e.g., ADANIGREEN)
+
+```python
+from openchart import NSEData
+from datetime import datetime
+
+nse = NSEData()
+start = datetime(2016, 9, 1)  # clamped to listing date
+end = datetime.now()
+
+# ADANIGREEN listed 2018-06-18 - 10yr request returns 2032 rows from listing
+data = nse.historical('ADANIGREEN-EQ', 'EQ', start, end, '1d')
+print(data.head())  # 2018-06-18  30.00  31.50  28.50  31.50
+print(data.tail())  # 2026-09-01  1220.00 1271.20 1217.00 1254.80
+print(f"Rows: {len(data)}")  # 2032
+data.to_csv('ADANIGREEN_10y_1d.csv')
+```
+
 ### Direct Historical Access
 
 If you already know the token (scripcode), you can fetch data directly:
@@ -274,7 +293,7 @@ data = nse.historical_direct(
 ```python
 # Get supported timeframes
 print(nse.timeframes())
-# Output: ['1m', '5m', '10m', '15m', '30m', '1h', '1d', '1w', '1M']
+# Output: ['1m', '3m', '5m', '10m', '15m', '30m', '1h', '1d', '1w', '1M']
 
 # Get supported segments
 print(nse.segments())
@@ -336,8 +355,12 @@ Returns list of supported market segments.
 ## Notes
 
 - Ensure you have a stable internet connection
-- Intraday data is filtered to market hours (up to 15:29:59)
-- Historical data availability depends on NSE's servers
+- Intraday data is filtered to market hours (`09:15` to `15:30`) - see `openchart/utils.py:108`; indices have `Volume 0` on intraday by NSE design
+- Historical data availability depends on NSE's servers **and listing date**: e.g., `ADANIGREEN-EQ` listed `2018-06-18`, so a 10-year `1d` request (`2016-09-01` to `2026-09-01`) returns `2031` rows from `2018-06-18` (verified live), not a full 10 calendar years
+- `start`/`end` are `datetime` objects converted to UNIX timestamps (`openchart/core.py:76`); if omitted, defaults to epoch → now. Raises `ValueError` if `start > end` or `TypeError` for non-datetime
+- `interval` is validated: invalid values raise `InvalidIntervalError` (e.g., `'2m'`), includes `3m` (see `openchart/core.py:22`). Large intraday ranges (>180 days) warn about possible truncation
+- Errors use `warnings` + `logging` + custom exceptions (`InvalidIntervalError`, `InvalidSegmentError`, `SymbolNotFoundError`) instead of silent `print`
+- Use as context manager: `with NSEData() as nse: ...` or `nse.close()`; `timeout` and `max_retries` configurable via `NSEData(timeout=10, max_retries=3)`
 
 ## License
 

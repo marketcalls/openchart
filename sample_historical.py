@@ -1,28 +1,22 @@
 from openchart import NSEData
 import datetime
 
-# Initialize the NSEData class
 nse = NSEData()
 
-# Download master data for NSE and NFO
-nse.download()
-
-# Define the start and end dates (last 30 days)
 end_date = datetime.datetime.now()
-start_date = end_date - datetime.timedelta(days=30)
+start_date = end_date - datetime.timedelta(days=5)
 
-# Fetch 5-minute historical data for RELIANCE
+# Fetch 5-minute historical data for RELIANCE-EQ
 data = nse.historical(
-    symbol='RELIANCE',
-    exchange='NSE',
+    symbol='RELIANCE-EQ',
+    segment='EQ',
     start=start_date,
     end=end_date,
     interval='5m'
 )
 
-# Display the fetched data
 if not data.empty:
-    print("5-minute historical data for RELIANCE (Last 30 days):")
+    print("5-minute historical data for RELIANCE-EQ (Last 5 days):")
     print(data)
 else:
-    print("No data available for RELIANCE for the specified time period.")
+    print("No data available for RELIANCE-EQ for the specified time period.")
